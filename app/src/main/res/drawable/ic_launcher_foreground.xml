@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- FocusLoop mark: an open ring that sweeps from purple to teal, evoking a
+         loop that always brings you back to focus, with a leading dot marking
+         the point of return. -->
+    <path
+        android:pathData="M39.09,75.30 A26,26 0 1,1 68.91,75.30"
+        android:strokeWidth="11"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="sweep"
+                android:centerX="54"
+                android:centerY="54"
+                android:startColor="#6C63FF"
+                android:centerColor="#3AA8E0"
+                android:endColor="#00D4AA" />
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M68.91,75.30 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0"
+        android:fillColor="#00D4AA" />
+</vector>

@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">FocusLoop</string>
+    <string name="notification_channel_id">focusloop_monitoring</string>
+    <string name="notification_channel_name">FocusLoop Monitoring</string>
+    <string name="notification_title">FocusLoop is protecting your attention</string>
+    <string name="notification_text">Monitoring active</string>
+</resources>

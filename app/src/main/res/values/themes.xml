@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.FocusLoop" parent="android:Theme.Material.Light.NoActionBar"/>
+    <style name="Theme.FocusLoop.Transparent" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+    </style>
+</resources>
