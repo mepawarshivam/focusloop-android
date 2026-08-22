@@ -13,7 +13,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.focusloop.app.data.datastore.SettingsDataStore
+import com.focusloop.app.data.repository.UserDataRepository
 import com.focusloop.app.data.repository.GoalRepository
 import com.focusloop.app.domain.model.Goal
 import com.focusloop.app.ui.components.GradientButton

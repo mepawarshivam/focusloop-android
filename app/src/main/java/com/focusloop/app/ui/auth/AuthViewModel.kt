@@ -2,14 +2,16 @@ package com.focusloop.app.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.focusloop.app.data.datastore.AuthDataStore
-import com.focusloop.app.data.datastore.AuthResult
+import com.focusloop.app.data.repository.AuthRepository
+import com.focusloop.app.data.repository.AuthResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class AuthUiState(
+    // Accounts live on the server now, so a fresh install can't know whether
+    // this person already has one — default to Sign Up, they can switch.
     val isSignUpMode: Boolean = true,
     val email: String = "",
     val password: String = "",
@@ -17,17 +19,10 @@ data class AuthUiState(
     val errorMessage: String? = null
 )
 
-class AuthViewModel(private val authDataStore: AuthDataStore) : ViewModel() {
+class AuthViewModel(private val authDataStore: AuthRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(AuthUiState())
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            val hasAccount = authDataStore.hasAccount()
-            _state.value = _state.value.copy(isSignUpMode = !hasAccount)
-        }
-    }
 
     fun onEmailChange(value: String) {
         _state.value = _state.value.copy(email = value, errorMessage = null)

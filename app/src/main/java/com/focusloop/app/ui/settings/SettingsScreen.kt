@@ -19,11 +19,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.focusloop.app.data.datastore.AuthDataStore
-import com.focusloop.app.data.datastore.AuthState
-import com.focusloop.app.data.datastore.SettingsDataStore
+import com.focusloop.app.data.repository.AuthRepository
+import com.focusloop.app.data.repository.AuthState
+import com.focusloop.app.data.repository.UserDataRepository
 import com.focusloop.app.domain.model.UserSettings
 import com.focusloop.app.service.FocusMonitoringService
+import com.focusloop.app.ui.components.softShadow
 import com.focusloop.app.ui.theme.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -32,6 +33,7 @@ import compose.icons.feathericons.Bell
 import compose.icons.feathericons.BarChart2
 import compose.icons.feathericons.Code
 import compose.icons.feathericons.ExternalLink
+import compose.icons.feathericons.Heart
 import compose.icons.feathericons.Layers
 import compose.icons.feathericons.Lock
 import compose.icons.feathericons.LogOut
@@ -40,8 +42,8 @@ import compose.icons.feathericons.PlayCircle
 import compose.icons.feathericons.Smartphone
 
 class SettingsViewModel(
-    private val settingsDataStore: SettingsDataStore,
-    private val authDataStore: AuthDataStore
+    private val settingsDataStore: UserDataRepository,
+    private val authDataStore: AuthRepository
 ) : ViewModel() {
     val settings: StateFlow<UserSettings> = settingsDataStore.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserSettings())
@@ -69,7 +71,12 @@ class SettingsViewModel(
 }
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel, onLoggedOut: () -> Unit = {}) {
+fun SettingsScreen(
+    viewModel: SettingsViewModel,
+    onLoggedOut: () -> Unit = {},
+    onEditHobbies: () -> Unit = {},
+    onEditApps: () -> Unit = {}
+) {
     val settings by viewModel.settings.collectAsState()
     val authState by viewModel.authState.collectAsState()
     val context = LocalContext.current
@@ -124,6 +131,25 @@ fun SettingsScreen(viewModel: SettingsViewModel, onLoggedOut: () -> Unit = {}) {
                 onValueChange = { min ->
                     viewModel.update(settings.copy(cooldownDurationMs = min.toLong() * 60000))
                 }
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // Preferences — edit the choices made during onboarding
+        SettingsSection("Preferences") {
+            SettingsActionRow(
+                icon = FeatherIcons.Heart,
+                label = "Hobbies & Interests",
+                sublabel = "Used to personalize your reset breaks",
+                onClick = onEditHobbies
+            )
+            SettingsDivider()
+            SettingsActionRow(
+                icon = FeatherIcons.Smartphone,
+                label = "Monitored Apps",
+                sublabel = "Which apps FocusLoop watches",
+                onClick = onEditApps
             )
         }
 
@@ -224,7 +250,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onLoggedOut: () -> Unit = {}) {
                 Icon(FeatherIcons.Lock, null, tint = FocusGreen, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    "Your FocusLoop data stays on your device. No usage data, goals, or personal information is ever sent to any server.",
+                    "Your goals, to-dos, and focus stats sync securely to your account so they're never lost. Your password is never stored in plain text, and we never sell or share your data with third parties.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 20.sp
@@ -249,8 +275,9 @@ fun SettingsScreen(viewModel: SettingsViewModel, onLoggedOut: () -> Unit = {}) {
 private fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Text(title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().softShadow(cornerRadius = 16.dp, elevation = 4.dp),
         shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), content = content)

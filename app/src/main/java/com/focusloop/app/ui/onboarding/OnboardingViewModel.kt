@@ -2,7 +2,7 @@ package com.focusloop.app.ui.onboarding
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.focusloop.app.data.datastore.SettingsDataStore
+import com.focusloop.app.data.repository.UserDataRepository
 import com.focusloop.app.data.repository.GoalRepository
 import com.focusloop.app.domain.model.Goal
 import com.focusloop.app.domain.model.TodoItem
@@ -24,7 +24,7 @@ data class OnboardingState(
 )
 
 class OnboardingViewModel(
-    private val settingsDataStore: SettingsDataStore,
+    private val settingsDataStore: UserDataRepository,
     private val goalRepository: GoalRepository
 ) : ViewModel() {
 

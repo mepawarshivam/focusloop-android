@@ -24,7 +24,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.focusloop.app.FocusLoopApplication
+import com.focusloop.app.domain.model.Flashcard
 import com.focusloop.app.domain.model.Goal
+import com.focusloop.app.domain.model.ReflectionPrompt
 import com.focusloop.app.domain.model.RecommendationItem
 import com.focusloop.app.domain.model.RecommendationType
 import com.focusloop.app.ui.theme.FocusLoopTheme
@@ -115,7 +117,7 @@ sealed class InterventionChoice {
     object Snooze : InterventionChoice()
 }
 
-enum class RecommendationTab { QUIZ, WATCH, READ, DISCOVER }
+enum class RecommendationTab { QUIZ, FLASHCARDS, WATCH, READ, REFLECT, DISCOVER }
 
 data class InterventionUiState(
     val choice: InterventionChoice = InterventionChoice.None,
@@ -129,7 +131,18 @@ data class InterventionUiState(
     val recommendationTab: RecommendationTab = RecommendationTab.QUIZ,
     val videoRecs: List<RecommendationItem> = emptyList(),
     val articleRecs: List<RecommendationItem> = emptyList(),
-    val eventRecs: List<RecommendationItem> = emptyList()
+    val eventRecs: List<RecommendationItem> = emptyList(),
+    val watchingUrl: String? = null,
+    val flashcards: List<Flashcard> = emptyList(),
+    val flashcardIndex: Int = 0,
+    val flashcardFlipped: Boolean = false,
+    val flashcardsLoading: Boolean = false,
+    val flashcardsError: Boolean = false,
+    val reflection: ReflectionPrompt? = null,
+    val reflectionAnswer: String = "",
+    val reflectionSubmitted: Boolean = false,
+    val reflectionLoading: Boolean = false,
+    val reflectionError: Boolean = false
 )
 
 class InterventionViewModel(
@@ -166,6 +179,83 @@ class InterventionViewModel(
 
     fun selectRecommendationTab(tab: RecommendationTab) {
         _state.value = _state.value.copy(recommendationTab = tab)
+        when (tab) {
+            RecommendationTab.FLASHCARDS -> loadFlashcardsIfNeeded()
+            RecommendationTab.REFLECT -> loadReflectionIfNeeded()
+            else -> Unit
+        }
+    }
+
+    private suspend fun currentTopic(): String {
+        val settings = app.settingsDataStore.settings.first()
+        return settings.hobbies.firstOrNull()
+            ?: goalTitle.takeIf { it.isNotBlank() }
+            ?: "building better focus habits"
+    }
+
+    private fun loadFlashcardsIfNeeded() {
+        if (_state.value.flashcards.isNotEmpty() || _state.value.flashcardsLoading) return
+        _state.value = _state.value.copy(flashcardsLoading = true, flashcardsError = false)
+        viewModelScope.launch {
+            try {
+                val topic = currentTopic()
+                val cards = app.microlearningRepository.generateFlashcards(topic)
+                _state.value = _state.value.copy(
+                    flashcards = cards,
+                    flashcardIndex = 0,
+                    flashcardFlipped = false,
+                    flashcardsLoading = false,
+                    flashcardsError = cards.isEmpty()
+                )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(flashcardsLoading = false, flashcardsError = true)
+            }
+        }
+    }
+
+    fun flipFlashcard() {
+        _state.value = _state.value.copy(flashcardFlipped = !_state.value.flashcardFlipped)
+    }
+
+    fun nextFlashcard() {
+        val next = _state.value.flashcardIndex + 1
+        if (next < _state.value.flashcards.size) {
+            _state.value = _state.value.copy(flashcardIndex = next, flashcardFlipped = false)
+        }
+    }
+
+    private fun loadReflectionIfNeeded() {
+        if (_state.value.reflection != null || _state.value.reflectionLoading) return
+        _state.value = _state.value.copy(reflectionLoading = true, reflectionError = false)
+        viewModelScope.launch {
+            try {
+                val topic = currentTopic()
+                val reflection = app.microlearningRepository.generateReflection(topic)
+                _state.value = _state.value.copy(reflection = reflection, reflectionLoading = false)
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(reflectionLoading = false, reflectionError = true)
+            }
+        }
+    }
+
+    fun updateReflectionAnswer(text: String) {
+        _state.value = _state.value.copy(reflectionAnswer = text)
+    }
+
+    fun submitReflection() {
+        if (_state.value.reflectionAnswer.isBlank()) return
+        viewModelScope.launch {
+            app.settingsDataStore.addLearningXp(10)
+            _state.value = _state.value.copy(reflectionSubmitted = true, xpEarned = 10)
+        }
+    }
+
+    fun openVideo(url: String) {
+        _state.value = _state.value.copy(watchingUrl = url)
+    }
+
+    fun closeVideo() {
+        _state.value = _state.value.copy(watchingUrl = null)
     }
 
     fun chooseReset() {

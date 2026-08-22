@@ -16,24 +16,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
 import com.focusloop.app.domain.model.DistractingApp
 import com.focusloop.app.domain.model.Goal
 import com.focusloop.app.domain.model.KnownDistractingApps
 import com.focusloop.app.ui.components.AppLogo
+import com.focusloop.app.ui.components.AppSelectionCard
 import com.focusloop.app.ui.components.GradientButton
+import com.focusloop.app.ui.components.HobbySelectionCard
 import com.focusloop.app.ui.components.OutlinedFocusButton
 import com.focusloop.app.ui.theme.*
 import compose.icons.FeatherIcons
 import compose.icons.feathericons.ArrowLeft
+import compose.icons.feathericons.ArrowRight
 import compose.icons.feathericons.Check
 import compose.icons.feathericons.CheckCircle
 import compose.icons.feathericons.Circle
 import compose.icons.feathericons.Plus
+import compose.icons.feathericons.Star
 import compose.icons.feathericons.X
 
 @Composable
@@ -153,7 +159,7 @@ private fun WelcomeStep(onNext: () -> Unit) {
             )
             Spacer(Modifier.height(16.dp))
             Text(
-                "Privacy-first · Everything stays on your device",
+                "Your data, your account · Never sold or shared",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFF6B6880),
                 textAlign = TextAlign.Center,
@@ -209,26 +215,40 @@ private fun GoalsStep(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Added goals
-            items(goals) { goal ->
-                GoalChip(title = goal.title, onRemove = { onRemoveGoal(goal) })
+            // Suggestions — always visible, toggle on/off, pick as many as you like
+            item {
+                Text(
+                    "Suggestions:",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+            items(suggestions) { suggestion ->
+                val addedGoal = goals.find { it.title == suggestion }
+                SuggestionChip(
+                    text = suggestion,
+                    isSelected = addedGoal != null,
+                    onClick = {
+                        if (addedGoal != null) onRemoveGoal(addedGoal) else onAddGoal(suggestion, "", 0)
+                    }
+                )
             }
 
-            // Suggestions (only show if not already added)
-            if (goals.isEmpty()) {
+            // Custom goals (not part of the suggestion set)
+            val customGoals = goals.filterNot { goal -> suggestions.any { it == goal.title } }
+            if (customGoals.isNotEmpty()) {
                 item {
+                    Spacer(Modifier.height(4.dp))
                     Text(
-                        "Suggestions:",
+                        "Your own:",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
                 }
-                items(suggestions) { suggestion ->
-                    SuggestionChip(
-                        text = suggestion,
-                        onClick = { onAddGoal(suggestion, "", 0) }
-                    )
+                items(customGoals) { goal ->
+                    GoalChip(title = goal.title, onRemove = { onRemoveGoal(goal) })
                 }
             }
 
@@ -305,18 +325,26 @@ private fun GoalChip(title: String, onRemove: () -> Unit) {
 }
 
 @Composable
-private fun SuggestionChip(text: String, onClick: () -> Unit) {
+private fun SuggestionChip(text: String, isSelected: Boolean, onClick: () -> Unit) {
+    val borderColor = if (isSelected) FocusPurple else MaterialTheme.colorScheme.outline
+    val bgColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+            .border(1.5.dp, borderColor, RoundedCornerShape(12.dp))
+            .background(bgColor)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(text, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        Icon(FeatherIcons.Plus, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+        if (isSelected) {
+            Icon(FeatherIcons.CheckCircle, null, tint = FocusPurple, modifier = Modifier.size(20.dp))
+        } else {
+            Icon(FeatherIcons.Plus, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        }
     }
 }
 
@@ -410,6 +438,10 @@ private fun HobbiesStep(
     onNext: () -> Unit,
     onBack: () -> Unit
 ) {
+    var customHobby by remember { mutableStateOf("") }
+    val predefinedNames = remember { com.focusloop.app.domain.model.HobbyTags.all.map { it.first }.toSet() }
+    val customHobbies = selectedHobbies.filterNot { it in predefinedNames }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -429,7 +461,7 @@ private fun HobbiesStep(
         Spacer(Modifier.height(8.dp))
 
         Text(
-            "We'll use this to personalize your reset breaks with things you actually care about.",
+            "Pick as many as you like, or add your own — we'll use these to personalize your reset breaks.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -440,12 +472,49 @@ private fun HobbiesStep(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(com.focusloop.app.domain.model.HobbyTags.all) { (hobby, emoji) ->
+            items(com.focusloop.app.domain.model.HobbyTags.all) { (hobby, icon) ->
                 HobbySelectionCard(
                     hobby = hobby,
-                    emoji = emoji,
+                    icon = icon,
                     isSelected = hobby in selectedHobbies,
                     onToggle = { onToggleHobby(hobby) }
+                )
+            }
+
+            items(customHobbies) { hobby ->
+                HobbySelectionCard(
+                    hobby = hobby,
+                    icon = FeatherIcons.Star,
+                    isSelected = true,
+                    onToggle = { onToggleHobby(hobby) }
+                )
+            }
+
+            item {
+                Spacer(Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = customHobby,
+                    onValueChange = { customHobby = it },
+                    label = { Text("Add your own") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = {
+                        if (customHobby.isNotBlank()) {
+                            onToggleHobby(customHobby.trim())
+                            customHobby = ""
+                        }
+                    }),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            if (customHobby.isNotBlank()) {
+                                onToggleHobby(customHobby.trim())
+                                customHobby = ""
+                            }
+                        }) {
+                            Icon(FeatherIcons.Plus, "Add")
+                        }
+                    }
                 )
             }
         }
@@ -457,32 +526,6 @@ private fun HobbiesStep(
             onClick = onNext,
             modifier = Modifier.fillMaxWidth()
         )
-    }
-}
-
-@Composable
-private fun HobbySelectionCard(hobby: String, emoji: String, isSelected: Boolean, onToggle: () -> Unit) {
-    val borderColor = if (isSelected) FocusPurple else MaterialTheme.colorScheme.outline
-    val bgColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .border(1.5.dp, borderColor, RoundedCornerShape(14.dp))
-            .background(bgColor)
-            .clickable(onClick = onToggle)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(emoji, fontSize = 28.sp)
-        Spacer(Modifier.width(16.dp))
-        Text(hobby, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
-        if (isSelected) {
-            Icon(FeatherIcons.CheckCircle, null, tint = FocusPurple, modifier = Modifier.size(22.dp))
-        } else {
-            Icon(FeatherIcons.Circle, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(22.dp))
-        }
     }
 }
 
@@ -539,32 +582,6 @@ private fun AppsStep(
             onClick = onNext,
             modifier = Modifier.fillMaxWidth()
         )
-    }
-}
-
-@Composable
-private fun AppSelectionCard(app: DistractingApp, isSelected: Boolean, onToggle: () -> Unit) {
-    val borderColor = if (isSelected) FocusPurple else MaterialTheme.colorScheme.outline
-    val bgColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .border(1.5.dp, borderColor, RoundedCornerShape(14.dp))
-            .background(bgColor)
-            .clickable(onClick = onToggle)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(app.emoji, fontSize = 28.sp)
-        Spacer(Modifier.width(16.dp))
-        Text(app.displayName, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
-        if (isSelected) {
-            Icon(FeatherIcons.CheckCircle, null, tint = FocusPurple, modifier = Modifier.size(22.dp))
-        } else {
-            Icon(FeatherIcons.Circle, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(22.dp))
-        }
     }
 }
 
@@ -641,9 +658,10 @@ private fun TimingStep(
         Spacer(Modifier.weight(1f))
 
         GradientButton(
-            text = if (isLoading) "Setting up..." else "Start Protecting My Focus 🚀",
+            text = if (isLoading) "Setting up..." else "Start Protecting My Focus",
             onClick = { if (!isLoading) onComplete() },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            icon = if (isLoading) null else FeatherIcons.ArrowRight
         )
     }
 }

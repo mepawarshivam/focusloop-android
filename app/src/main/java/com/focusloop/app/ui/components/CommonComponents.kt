@@ -4,13 +4,12 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -107,7 +106,12 @@ fun FocusCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.shadow(
+            elevation = 10.dp,
+            shape = RoundedCornerShape(20.dp),
+            ambientColor = FocusPurple.copy(alpha = 0.18f),
+            spotColor = FocusPurple.copy(alpha = 0.18f)
+        ),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(
@@ -230,3 +234,19 @@ fun PulsingDot(color: Color = FocusGreen, size: Dp = 10.dp) {
 // Extension for gradient background with clip
 private fun Modifier.gradientBackground(colors: List<Color>, shape: RoundedCornerShape): Modifier =
     this.clip(shape).background(Brush.linearGradient(colors))
+
+/**
+ * Soft, tinted drop shadow for cards and rows — reads as "designed" rather than
+ * Material's default flat/tonal elevation. Tint defaults to the brand purple at
+ * low alpha so the shadow feels warm instead of a generic grey smudge.
+ */
+fun Modifier.softShadow(
+    cornerRadius: Dp = 16.dp,
+    elevation: Dp = 6.dp,
+    tint: Color = FocusPurple
+): Modifier = this.shadow(
+    elevation = elevation,
+    shape = RoundedCornerShape(cornerRadius),
+    ambientColor = tint.copy(alpha = 0.12f),
+    spotColor = tint.copy(alpha = 0.12f)
+)

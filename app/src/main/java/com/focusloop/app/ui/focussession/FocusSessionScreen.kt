@@ -5,8 +5,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,11 +18,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.focusloop.app.data.datastore.SettingsDataStore
+import com.focusloop.app.data.repository.UserDataRepository
 import com.focusloop.app.data.repository.SessionRepository
 import com.focusloop.app.domain.model.FocusSession
 import com.focusloop.app.ui.components.FocusRing
 import com.focusloop.app.ui.theme.*
+import compose.icons.FeatherIcons
+import compose.icons.feathericons.CheckCircle
+import compose.icons.feathericons.Zap
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,7 +42,7 @@ data class FocusSessionState(
 )
 
 class FocusSessionViewModel(
-    private val settingsDataStore: SettingsDataStore,
+    private val settingsDataStore: UserDataRepository,
     private val sessionRepository: SessionRepository,
     goalId: Long,
     goalTitle: String
@@ -219,7 +220,15 @@ private fun SessionCompletePanel(state: FocusSessionState, onDone: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("🎉", fontSize = 72.sp)
+        Box(
+            modifier = Modifier
+                .size(84.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .background(Color(0x33FFFFFF)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(FeatherIcons.CheckCircle, contentDescription = null, tint = FocusTeal, modifier = Modifier.size(40.dp))
+        }
 
         Spacer(Modifier.height(24.dp))
 
@@ -248,7 +257,7 @@ private fun SessionCompletePanel(state: FocusSessionState, onDone: () -> Unit) {
                 .padding(horizontal = 32.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("⚡", fontSize = 28.sp)
+            Icon(FeatherIcons.Zap, contentDescription = null, tint = FocusYellow, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(12.dp))
             Text(
                 "+${state.xpEarned} Focus XP",

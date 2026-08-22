@@ -16,16 +16,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.focusloop.app.data.datastore.SettingsDataStore
+import com.focusloop.app.data.repository.UserDataRepository
 import com.focusloop.app.data.repository.LearningRepository
 import com.focusloop.app.domain.model.LearningQuestion
 import com.focusloop.app.domain.model.QuestionCategory
+import com.focusloop.app.ui.components.softShadow
 import com.focusloop.app.ui.theme.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import compose.icons.FeatherIcons
 import compose.icons.feathericons.ArrowLeft
 import compose.icons.feathericons.ChevronRight
+import compose.icons.feathericons.GitBranch
+import compose.icons.feathericons.Globe
+import compose.icons.feathericons.Layers
+import compose.icons.feathericons.Percent
+import compose.icons.feathericons.Shuffle
+import compose.icons.feathericons.Target
+import compose.icons.feathericons.Terminal
+import compose.icons.feathericons.Zap
 
 data class ChallengesUiState(
     val selectedCategory: QuestionCategory? = null,
@@ -39,7 +48,7 @@ data class ChallengesUiState(
 
 class ChallengesViewModel(
     private val learningRepository: LearningRepository,
-    private val settingsDataStore: SettingsDataStore
+    private val settingsDataStore: UserDataRepository
 ) : ViewModel() {
     private val _state = MutableStateFlow(ChallengesUiState())
     val state: StateFlow<ChallengesUiState> = _state.asStateFlow()
@@ -117,7 +126,7 @@ fun ChallengesScreen(viewModel: ChallengesViewModel) {
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("⚡", fontSize = 20.sp)
+            Icon(FeatherIcons.Zap, contentDescription = null, tint = FocusPurple, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(
                 "${state.totalLearningXp} Learning XP",
@@ -160,8 +169,10 @@ private fun CategorySelectionView(onSelectCategory: (QuestionCategory) -> Unit, 
         Card(
             modifier = Modifier
                 .fillMaxWidth()
+                .softShadow(cornerRadius = 20.dp, elevation = 10.dp)
                 .clickable { onRandomChallenge() },
             shape = RoundedCornerShape(20.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             colors = CardDefaults.cardColors(containerColor = FocusPurple)
         ) {
             Row(
@@ -172,7 +183,7 @@ private fun CategorySelectionView(onSelectCategory: (QuestionCategory) -> Unit, 
                     Text("Today's Challenge", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.8f))
                     Text("Random · 2 minutes · +10 XP", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.Bold)
                 }
-                Text("🎲", fontSize = 36.sp)
+                Icon(FeatherIcons.Shuffle, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
             }
         }
 
@@ -190,19 +201,20 @@ private fun CategorySelectionView(onSelectCategory: (QuestionCategory) -> Unit, 
 
 @Composable
 private fun CategoryRow(category: QuestionCategory, onSelect: () -> Unit) {
-    val (emoji, color) = when (category) {
-        QuestionCategory.DSA -> "🌲" to FocusPurple
-        QuestionCategory.SYSTEM_DESIGN -> "🏗️" to FocusTeal
-        QuestionCategory.JAVASCRIPT -> "⚡" to FocusYellow
-        QuestionCategory.PROGRAMMING -> "💻" to FocusOrange
-        QuestionCategory.GENERAL -> "🌍" to FocusGreen
-        QuestionCategory.MATH -> "📐" to FocusRed
-        QuestionCategory.PRODUCTIVITY -> "🎯" to FocusPurpleLight
+    val (icon, color) = when (category) {
+        QuestionCategory.DSA -> FeatherIcons.GitBranch to FocusPurple
+        QuestionCategory.SYSTEM_DESIGN -> FeatherIcons.Layers to FocusTeal
+        QuestionCategory.JAVASCRIPT -> FeatherIcons.Zap to FocusYellow
+        QuestionCategory.PROGRAMMING -> FeatherIcons.Terminal to FocusOrange
+        QuestionCategory.GENERAL -> FeatherIcons.Globe to FocusGreen
+        QuestionCategory.MATH -> FeatherIcons.Percent to FocusRed
+        QuestionCategory.PRODUCTIVITY -> FeatherIcons.Target to FocusPurpleLight
     }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .softShadow(cornerRadius = 14.dp, elevation = 3.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.surface)
             .clickable(onClick = onSelect)
@@ -216,7 +228,7 @@ private fun CategoryRow(category: QuestionCategory, onSelect: () -> Unit) {
                 .background(color.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
-            Text(emoji, fontSize = 20.sp)
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(14.dp))
         Text(category.displayName, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))

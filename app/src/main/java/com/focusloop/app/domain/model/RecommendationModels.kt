@@ -1,5 +1,18 @@
 package com.focusloop.app.domain.model
 
+import androidx.compose.ui.graphics.vector.ImageVector
+import compose.icons.FeatherIcons
+import compose.icons.feathericons.Activity
+import compose.icons.feathericons.Book
+import compose.icons.feathericons.Briefcase
+import compose.icons.feathericons.Code
+import compose.icons.feathericons.Coffee
+import compose.icons.feathericons.Compass
+import compose.icons.feathericons.Music
+import compose.icons.feathericons.PenTool
+import compose.icons.feathericons.PlayCircle
+import compose.icons.feathericons.Wind
+
 enum class RecommendationType { VIDEO, ARTICLE, EVENT }
 
 /**
@@ -21,16 +34,16 @@ data class RecommendationItem(
 
 /** Curated hobby tags offered during onboarding and used to tag recommendation content. */
 object HobbyTags {
-    val all = listOf(
-        "Fitness & Wellness" to "🏋️",
-        "Reading" to "📚",
-        "Coding & Tech" to "💻",
-        "Music" to "🎵",
-        "Art & Design" to "🎨",
-        "Cooking" to "🍳",
-        "Mindfulness" to "🧘",
-        "Outdoors & Nature" to "🌲",
-        "Gaming" to "🎮",
-        "Business & Career" to "💼"
+    val all: List<Pair<String, ImageVector>> = listOf(
+        "Fitness & Wellness" to FeatherIcons.Activity,
+        "Reading" to FeatherIcons.Book,
+        "Coding & Tech" to FeatherIcons.Code,
+        "Music" to FeatherIcons.Music,
+        "Art & Design" to FeatherIcons.PenTool,
+        "Cooking" to FeatherIcons.Coffee,
+        "Mindfulness" to FeatherIcons.Wind,
+        "Outdoors & Nature" to FeatherIcons.Compass,
+        "Gaming" to FeatherIcons.PlayCircle,
+        "Business & Career" to FeatherIcons.Briefcase
     )
 }

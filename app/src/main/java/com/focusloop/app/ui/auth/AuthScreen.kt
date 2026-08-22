@@ -67,7 +67,7 @@ fun AuthScreen(
         Spacer(Modifier.height(8.dp))
 
         Text(
-            "Just an email and password — nothing else, and it never leaves your device.",
+            "Just an email and password — synced securely to your account, never sold or shared.",
             style = MaterialTheme.typography.bodyMedium,
             color = Color(0xFFB0AEC8)
         )
