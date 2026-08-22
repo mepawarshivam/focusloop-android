@@ -3,22 +3,25 @@ package com.focusloop.app.ui.insights
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.focusloop.app.data.repository.SessionRepository
 import com.focusloop.app.domain.model.DailyStats
+import com.focusloop.app.ui.components.softShadow
 import com.focusloop.app.ui.theme.*
+import compose.icons.FeatherIcons
+import compose.icons.feathericons.BatteryCharging
+import compose.icons.feathericons.Info
+import compose.icons.feathericons.Smartphone
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -95,7 +98,7 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
         InsightCard(
             title = "Today's distraction",
             value = formatMs(state.todayDistractionMs),
-            icon = "📱",
+            icon = FeatherIcons.Smartphone,
             color = FocusOrange
         )
 
@@ -124,7 +127,7 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
         InsightCard(
             title = "Time recovered this week",
             value = formatMs(state.weekTotalFocusMs),
-            icon = "🔋",
+            icon = FeatherIcons.BatteryCharging,
             color = FocusTeal
         )
 
@@ -138,7 +141,7 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Row(modifier = Modifier.padding(16.dp)) {
-                    Text("💡", fontSize = 24.sp)
+                    Icon(FeatherIcons.Info, contentDescription = null, tint = FocusPurple, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(12.dp))
                     Text(
                         state.insight,
@@ -152,17 +155,26 @@ fun InsightsScreen(viewModel: InsightsViewModel) {
 }
 
 @Composable
-private fun InsightCard(title: String, value: String, icon: String, color: Color) {
+private fun InsightCard(title: String, value: String, icon: ImageVector, color: Color) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().softShadow(cornerRadius = 16.dp),
         shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(icon, fontSize = 32.sp)
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(color.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+            }
             Spacer(Modifier.width(16.dp))
             Column {
                 Text(title, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -4,8 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import com.focusloop.app.data.datastore.SettingsDataStore
-import com.focusloop.app.data.datastore.dataStore
+import com.focusloop.app.FocusLoopApplication
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -19,9 +18,9 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
 
+        val app = context.applicationContext as FocusLoopApplication
         CoroutineScope(Dispatchers.IO).launch {
-            val store = SettingsDataStore(context)
-            val settings = store.settings.first()
+            val settings = app.settingsDataStore.settings.first()
 
             if (settings.monitoringEnabled) {
                 val serviceIntent = Intent(context, FocusMonitoringService::class.java)

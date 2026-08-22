@@ -2,7 +2,7 @@ package com.focusloop.app.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.focusloop.app.data.datastore.SettingsDataStore
+import com.focusloop.app.data.repository.UserDataRepository
 import com.focusloop.app.data.repository.GoalRepository
 import com.focusloop.app.data.repository.SessionRepository
 import com.focusloop.app.domain.model.Goal
@@ -26,7 +26,7 @@ data class HomeUiState(
 )
 
 class HomeViewModel(
-    private val settingsDataStore: SettingsDataStore,
+    private val settingsDataStore: UserDataRepository,
     private val goalRepository: GoalRepository,
     private val sessionRepository: SessionRepository
 ) : ViewModel() {
@@ -102,6 +102,10 @@ class HomeViewModel(
             goalRepository.updateGoal(goal.copy(completed = true))
             settingsDataStore.addFocusXp(25)
         }
+    }
+
+    fun removeGoal(goal: Goal) {
+        viewModelScope.launch { goalRepository.deleteGoal(goal) }
     }
 
     fun addTodo(text: String) {

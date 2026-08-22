@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Backend (Firebase Auth + Firestore) -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
     <!-- Usage stats for detecting foreground app -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions"
@@ -21,6 +25,22 @@
 
     <!-- Vibration for interventions -->
     <uses-permission android:name="android.permission.VIBRATE"/>
+
+    <!-- Package visibility (Android 11+): needed to look up real icons for the
+         known distracting apps during onboarding, since PACKAGE_USAGE_STATS
+         alone doesn't grant getApplicationIcon() visibility into other apps. -->
+    <queries>
+        <package android:name="com.zhiliaoapp.musically"/>
+        <package android:name="com.instagram.android"/>
+        <package android:name="com.google.android.youtube"/>
+        <package android:name="com.reddit.frontpage"/>
+        <package android:name="com.twitter.android"/>
+        <package android:name="com.facebook.katana"/>
+        <package android:name="com.snapchat.android"/>
+        <package android:name="com.android.chrome"/>
+        <package android:name="com.linkedin.android"/>
+        <package android:name="com.pinterest"/>
+    </queries>
 
     <application
         android:name=".FocusLoopApplication"

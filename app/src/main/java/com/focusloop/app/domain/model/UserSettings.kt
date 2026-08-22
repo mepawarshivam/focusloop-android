@@ -19,22 +19,22 @@ data class UserSettings(
 // Predefined distracting apps with known package names
 object KnownDistractingApps {
     val defaults = listOf(
-        DistractingApp("com.zhiliaoapp.musically", "TikTok", "🎵"),
-        DistractingApp("com.instagram.android", "Instagram", "📸"),
-        DistractingApp("com.google.android.youtube", "YouTube", "▶️"),
-        DistractingApp("com.reddit.frontpage", "Reddit", "🤖"),
-        DistractingApp("com.twitter.android", "X (Twitter)", "🐦"),
-        DistractingApp("com.facebook.katana", "Facebook", "👥"),
-        DistractingApp("com.snapchat.android", "Snapchat", "👻"),
-        DistractingApp("com.android.chrome", "Chrome", "🌐"),
-        DistractingApp("com.linkedin.android", "LinkedIn", "💼"),
-        DistractingApp("com.pinterest", "Pinterest", "📌")
+        DistractingApp("com.zhiliaoapp.musically", "TikTok", 0xFF010101),
+        DistractingApp("com.instagram.android", "Instagram", 0xFFE1306C),
+        DistractingApp("com.google.android.youtube", "YouTube", 0xFFFF0000),
+        DistractingApp("com.reddit.frontpage", "Reddit", 0xFFFF4500),
+        DistractingApp("com.twitter.android", "X (Twitter)", 0xFF14171A),
+        DistractingApp("com.facebook.katana", "Facebook", 0xFF1877F2),
+        DistractingApp("com.snapchat.android", "Snapchat", 0xFFF7B500),
+        DistractingApp("com.android.chrome", "Chrome", 0xFF4285F4),
+        DistractingApp("com.linkedin.android", "LinkedIn", 0xFF0A66C2),
+        DistractingApp("com.pinterest", "Pinterest", 0xFFE60023)
     )
 }
 
 data class DistractingApp(
     val packageName: String,
     val displayName: String,
-    val emoji: String,
+    val colorArgb: Long,
     val isInstalled: Boolean = false
 )

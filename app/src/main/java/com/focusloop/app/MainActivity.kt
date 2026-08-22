@@ -11,6 +11,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -18,13 +19,15 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
-import com.focusloop.app.data.datastore.SettingsDataStore
+import com.focusloop.app.data.repository.UserDataRepository
 import com.focusloop.app.service.FocusMonitoringService
 import com.focusloop.app.ui.Screen
 import com.focusloop.app.ui.auth.AuthScreen
 import com.focusloop.app.ui.auth.AuthViewModel
 import com.focusloop.app.ui.challenges.ChallengesScreen
 import com.focusloop.app.ui.challenges.ChallengesViewModel
+import com.focusloop.app.ui.chat.ChatScreen
+import com.focusloop.app.ui.chat.ChatViewModel
 import com.focusloop.app.ui.focussession.FocusSessionScreen
 import com.focusloop.app.ui.focussession.FocusSessionViewModel
 import com.focusloop.app.ui.home.*
@@ -32,11 +35,15 @@ import com.focusloop.app.ui.insights.InsightsScreen
 import com.focusloop.app.ui.insights.InsightsViewModel
 import com.focusloop.app.ui.onboarding.OnboardingScreen
 import com.focusloop.app.ui.onboarding.OnboardingViewModel
+import com.focusloop.app.ui.settings.EditAppsScreen
+import com.focusloop.app.ui.settings.EditAppsViewModel
+import com.focusloop.app.ui.settings.EditHobbiesScreen
+import com.focusloop.app.ui.settings.EditHobbiesViewModel
 import com.focusloop.app.ui.settings.SettingsScreen
 import com.focusloop.app.ui.settings.SettingsViewModel
 import com.focusloop.app.ui.theme.FocusLoopTheme
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import compose.icons.FeatherIcons
 import compose.icons.feathericons.Award
 import compose.icons.feathericons.BarChart2
@@ -56,19 +63,9 @@ class MainActivity : ComponentActivity() {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 100)
         }
 
-        // Determine start destination based on auth + onboarding state
-        val onboardingDone = runBlocking {
-            app.settingsDataStore.settings.first().onboardingCompleted
-        }
-        val isLoggedIn = runBlocking {
-            app.authDataStore.authState.first().isLoggedIn
-        }
-        val startDestination = when {
-            !isLoggedIn -> Screen.Auth.route
-            !onboardingDone -> Screen.Onboarding.route
-            else -> Screen.Home.route
-        }
-
+        // Auth + settings now live in Firebase, so resolving the start destination
+        // means a network-backed read — never block onCreate on it. FocusLoopNavHost
+        // starts on a Splash route and navigates on once that resolves.
         setContent {
             val settingsFlow = app.settingsDataStore.settings.collectAsState(
                 initial = com.focusloop.app.domain.model.UserSettings()
@@ -78,7 +75,7 @@ class MainActivity : ComponentActivity() {
             FocusLoopTheme(darkTheme = darkMode) {
                 FocusLoopNavHost(
                     app = app,
-                    startDestination = startDestination,
+                    startDestination = Screen.Splash.route,
                     onStartService = ::startMonitoringService,
                     onStopService = ::stopMonitoringService
                 )
@@ -115,16 +112,36 @@ fun FocusLoopNavHost(
         enterTransition = { fadeIn(tween(300)) },
         exitTransition = { fadeOut(tween(200)) }
     ) {
+        // Resolves auth + onboarding state (both now network-backed) before routing
+        composable(Screen.Splash.route) {
+            LaunchedEffect(Unit) {
+                val isLoggedIn = app.authDataStore.authState.first().isLoggedIn
+                val destination = if (isLoggedIn) {
+                    val onboardingDone = app.settingsDataStore.settings.first().onboardingCompleted
+                    if (onboardingDone) Screen.Home.route else Screen.Onboarding.route
+                } else {
+                    Screen.Auth.route
+                }
+                navController.navigate(destination) {
+                    popUpTo(Screen.Splash.route) { inclusive = true }
+                }
+            }
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+
         // Auth gate
         composable(Screen.Auth.route) {
             val vm = remember { AuthViewModel(app.authDataStore) }
+            val scope = rememberCoroutineScope()
             AuthScreen(viewModel = vm, onAuthenticated = {
-                val onboardingDone = runBlocking {
-                    app.settingsDataStore.settings.first().onboardingCompleted
-                }
-                val destination = if (onboardingDone) Screen.Home.route else Screen.Onboarding.route
-                navController.navigate(destination) {
-                    popUpTo(Screen.Auth.route) { inclusive = true }
+                scope.launch {
+                    val onboardingDone = app.settingsDataStore.settings.first().onboardingCompleted
+                    val destination = if (onboardingDone) Screen.Home.route else Screen.Onboarding.route
+                    navController.navigate(destination) {
+                        popUpTo(Screen.Auth.route) { inclusive = true }
+                    }
                 }
             })
         }
@@ -172,6 +189,24 @@ fun FocusLoopNavHost(
         composable(Screen.AddGoal.route) {
             val vm = remember { AddGoalViewModel(app.goalRepository) }
             AddGoalScreen(viewModel = vm, onBack = { navController.popBackStack() })
+        }
+
+        // AI coach chat
+        composable(Screen.Chat.route) {
+            val vm = remember { ChatViewModel(app.chatRepository, app.settingsDataStore, app.goalRepository) }
+            ChatScreen(viewModel = vm, onBack = { navController.popBackStack() })
+        }
+
+        // Edit hobbies / interests
+        composable(Screen.EditHobbies.route) {
+            val vm = remember { EditHobbiesViewModel(app.settingsDataStore) }
+            EditHobbiesScreen(viewModel = vm, onBack = { navController.popBackStack() })
+        }
+
+        // Edit monitored apps
+        composable(Screen.EditApps.route) {
+            val vm = remember { EditAppsViewModel(app.settingsDataStore) }
+            EditAppsScreen(viewModel = vm, onBack = { navController.popBackStack() })
         }
     }
 }
@@ -240,7 +275,8 @@ fun MainAppScaffold(
                     onStartFocusSession = { id, title ->
                         navController.navigate(Screen.FocusSession.createRoute(id, title))
                     },
-                    onAddGoal = { navController.navigate(Screen.AddGoal.route) }
+                    onAddGoal = { navController.navigate(Screen.AddGoal.route) },
+                    onOpenChat = { navController.navigate(Screen.Chat.route) }
                 )
             }
             composable("insights") {
@@ -253,11 +289,16 @@ fun MainAppScaffold(
             }
             composable("settings") {
                 val vm = remember { SettingsViewModel(app.settingsDataStore, app.authDataStore) }
-                SettingsScreen(viewModel = vm, onLoggedOut = {
-                    navController.navigate(Screen.Auth.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                })
+                SettingsScreen(
+                    viewModel = vm,
+                    onLoggedOut = {
+                        navController.navigate(Screen.Auth.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    },
+                    onEditHobbies = { navController.navigate(Screen.EditHobbies.route) },
+                    onEditApps = { navController.navigate(Screen.EditApps.route) }
+                )
             }
         }
     }

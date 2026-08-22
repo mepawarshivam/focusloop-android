@@ -3,41 +3,75 @@ package com.focusloop.app.ui.home
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.toSize
 import com.focusloop.app.domain.model.Goal
 import com.focusloop.app.ui.components.*
 import com.focusloop.app.ui.theme.*
 import compose.icons.FeatherIcons
 import compose.icons.feathericons.CheckCircle
 import compose.icons.feathericons.Circle
+import compose.icons.feathericons.MessageCircle
 import compose.icons.feathericons.Play
 import compose.icons.feathericons.Plus
 import compose.icons.feathericons.RefreshCw
 import compose.icons.feathericons.Star
+import compose.icons.feathericons.Target
+import compose.icons.feathericons.TrendingUp
+import compose.icons.feathericons.Zap
 import compose.icons.feathericons.AlertTriangle
 import compose.icons.feathericons.X
+import kotlin.math.roundToInt
 
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
     onStartFocusSession: (goalId: Long, goalTitle: String) -> Unit,
-    onAddGoal: () -> Unit
+    onAddGoal: () -> Unit,
+    onOpenChat: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    var containerSizePx by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged { containerSizePx = it.toSize() }
+    ) {
+    val density = LocalDensity.current
+    val fabSizePx = with(density) { 56.dp.toPx() }
+    val paddingPx = with(density) { 24.dp.toPx() }
+    val minFabX = 0f
+    val minFabY = 0f
+    val maxFabX = (containerSizePx.width - fabSizePx - paddingPx).coerceAtLeast(0f)
+    val maxFabY = (containerSizePx.height - fabSizePx - paddingPx).coerceAtLeast(0f)
+
+    var fabX by rememberSaveable { mutableFloatStateOf(-1f) }
+    var fabY by rememberSaveable { mutableFloatStateOf(-1f) }
+    if (containerSizePx != androidx.compose.ui.geometry.Size.Zero) {
+        if (fabX < 0f) fabX = maxFabX
+        if (fabY < 0f) fabY = maxFabY
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -116,7 +150,8 @@ fun HomeScreen(
                 GoalCard(
                     goal = goal,
                     onStartSession = { onStartFocusSession(goal.id, goal.title) },
-                    onComplete = { viewModel.completeGoal(goal) }
+                    onComplete = { viewModel.completeGoal(goal) },
+                    onRemove = { viewModel.removeGoal(goal) }
                 )
             }
         }
@@ -168,6 +203,28 @@ fun HomeScreen(
             )
         }
     }
+
+        if (containerSizePx != androidx.compose.ui.geometry.Size.Zero) {
+            FloatingActionButton(
+                onClick = onOpenChat,
+                containerColor = FocusPurple,
+                contentColor = Color.White,
+                modifier = Modifier
+                    .offset {
+                        IntOffset(fabX.roundToInt(), fabY.roundToInt())
+                    }
+                    .pointerInput(Unit) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            fabX = (fabX + dragAmount.x).coerceIn(minFabX, maxFabX)
+                            fabY = (fabY + dragAmount.y).coerceIn(minFabY, maxFabY)
+                        }
+                    }
+            ) {
+                Icon(FeatherIcons.MessageCircle, contentDescription = "Open coach chat")
+            }
+        }
+    }
 }
 
 @Composable
@@ -180,7 +237,7 @@ private fun HomeHeader(greeting: String, isMonitoring: Boolean, streak: Int) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "$greeting 👋",
+                    greeting,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -198,7 +255,7 @@ private fun HomeHeader(greeting: String, isMonitoring: Boolean, streak: Int) {
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("🔥", fontSize = 18.sp)
+                    Icon(FeatherIcons.TrendingUp, contentDescription = null, tint = Color(0xFFE65100), modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text(
                         "$streak day streak",
@@ -295,18 +352,20 @@ private fun XpCard(progress: com.focusloop.app.domain.model.UserProgress) {
                     color = Color.White
                 )
             }
-            Text("⚡", fontSize = 36.sp)
+            Icon(FeatherIcons.Zap, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
         }
     }
 }
 
 @Composable
-private fun GoalCard(goal: Goal, onStartSession: () -> Unit, onComplete: () -> Unit) {
+private fun GoalCard(goal: Goal, onStartSession: () -> Unit, onComplete: () -> Unit, onRemove: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 6.dp),
+            .padding(horizontal = 24.dp, vertical = 6.dp)
+            .softShadow(cornerRadius = 16.dp),
         shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -334,6 +393,9 @@ private fun GoalCard(goal: Goal, onStartSession: () -> Unit, onComplete: () -> U
                         contentDescription = "Complete",
                         tint = if (goal.completed) FocusGreen else MaterialTheme.colorScheme.outline
                     )
+                }
+                IconButton(onClick = onRemove) {
+                    Icon(FeatherIcons.X, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -379,6 +441,7 @@ private fun TodoRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 4.dp)
+            .softShadow(cornerRadius = 14.dp, elevation = 3.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -447,7 +510,15 @@ private fun EmptyGoalsState(onAdd: () -> Unit) {
             .padding(horizontal = 24.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("🎯", fontSize = 48.sp)
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(FeatherIcons.Target, contentDescription = null, tint = FocusPurple, modifier = Modifier.size(30.dp))
+        }
         Spacer(Modifier.height(16.dp))
         Text(
             "What would you like to accomplish today?",

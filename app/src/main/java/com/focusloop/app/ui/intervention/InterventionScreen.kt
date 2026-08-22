@@ -20,18 +20,32 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.focusloop.app.domain.model.Flashcard
 import com.focusloop.app.domain.model.LearningQuestion
+import com.focusloop.app.domain.model.ReflectionPrompt
 import com.focusloop.app.domain.model.RecommendationItem
 import com.focusloop.app.domain.model.RecommendationType
 import com.focusloop.app.ui.theme.*
 import compose.icons.FeatherIcons
+import compose.icons.feathericons.ArrowRight
 import compose.icons.feathericons.BookOpen
+import compose.icons.feathericons.CheckCircle
+import compose.icons.feathericons.Clock
 import compose.icons.feathericons.ExternalLink
+import compose.icons.feathericons.Feather
 import compose.icons.feathericons.HelpCircle
+import compose.icons.feathericons.Layers
 import compose.icons.feathericons.MapPin
+import compose.icons.feathericons.PlayCircle
+import compose.icons.feathericons.TrendingUp
+import compose.icons.feathericons.Wind
+import compose.icons.feathericons.X
+import compose.icons.feathericons.XCircle
 import compose.icons.feathericons.Youtube
+import compose.icons.feathericons.Zap
 
 @Composable
 fun InterventionScreen(
@@ -76,17 +90,15 @@ fun InterventionScreen(
                     onBack = { viewModel.backToChoices() }
                 )
                 is InterventionChoice.Challenge -> ChallengePanel(
-                    question = state.question,
-                    selectedAnswer = state.selectedAnswer,
-                    answerRevealed = state.answerRevealed,
-                    xpEarned = state.xpEarned,
-                    isLoading = state.isLoadingQuestion,
-                    activeTab = state.recommendationTab,
-                    videoRecs = state.videoRecs,
-                    articleRecs = state.articleRecs,
-                    eventRecs = state.eventRecs,
+                    state = state,
                     onSelectTab = { viewModel.selectRecommendationTab(it) },
                     onSelectAnswer = { viewModel.submitAnswer(it) },
+                    onOpenVideo = { viewModel.openVideo(it) },
+                    onCloseVideo = { viewModel.closeVideo() },
+                    onFlipFlashcard = { viewModel.flipFlashcard() },
+                    onNextFlashcard = { viewModel.nextFlashcard() },
+                    onReflectionAnswerChange = { viewModel.updateReflectionAnswer(it) },
+                    onSubmitReflection = { viewModel.submitReflection() },
                     onDone = onDismiss,
                     onBack = { viewModel.backToChoices() }
                 )
@@ -127,8 +139,7 @@ private fun MainInterventionPanel(
     ) {
         Spacer(Modifier.height(48.dp))
 
-        // Brain icon with pulse
-        Text("🧠", fontSize = 52.sp)
+        IconBadge(icon = FeatherIcons.HelpCircle, tint = FocusPurpleLight, size = 76.dp)
 
         Spacer(Modifier.height(16.dp))
 
@@ -198,14 +209,20 @@ private fun MainInterventionPanel(
 
         Spacer(Modifier.height(20.dp))
 
-        // Action buttons
-        InterventionButton("🚀  Get Back To My Goal", FocusPurple, onChooseGoal)
+        // Action buttons — Microlearning is the flagship path, shown first and larger
+        InterventionButton(
+            "Quick Microlearning",
+            FocusTealDark,
+            onChooseChallenge,
+            icon = FeatherIcons.HelpCircle,
+            subtitle = "Quiz · Flashcards · Video · Reflect — 2 min"
+        )
         Spacer(Modifier.height(12.dp))
-        InterventionButton("🧠  2-Minute Challenge", FocusTealDark, onChooseChallenge)
+        InterventionButton("Get Back To My Goal", FocusPurple, onChooseGoal, icon = FeatherIcons.TrendingUp)
         Spacer(Modifier.height(12.dp))
-        InterventionButton("🌱  Take a Quick Reset", FocusGreen, onChooseReset)
+        InterventionButton("Take a Quick Reset", FocusGreen, onChooseReset, icon = FeatherIcons.Wind)
         Spacer(Modifier.height(12.dp))
-        InterventionButton("⏱  Give Me 5 More Minutes", Color(0xFF3A3860), onChooseSnooze, isSubtle = true)
+        InterventionButton("Give Me 5 More Minutes", Color(0xFF3A3860), onChooseSnooze, icon = FeatherIcons.Clock, isSubtle = true)
 
         Spacer(Modifier.height(32.dp))
     }
@@ -227,24 +244,64 @@ private fun AnimatedTimer(timeStr: String) {
 }
 
 @Composable
-private fun InterventionButton(text: String, color: Color, onClick: () -> Unit, isSubtle: Boolean = false) {
+private fun InterventionButton(
+    text: String,
+    color: Color,
+    onClick: () -> Unit,
+    icon: ImageVector? = null,
+    isSubtle: Boolean = false,
+    subtitle: String? = null
+) {
     Button(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(60.dp),
+            .height(if (subtitle != null) 72.dp else 60.dp),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (isSubtle) color else color.copy(alpha = 0.9f)
         ),
         elevation = ButtonDefaults.buttonElevation(0.dp)
     ) {
-        Text(
-            text,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White
-        )
+        if (icon != null) {
+            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(10.dp))
+        }
+        if (subtitle != null) {
+            Column(horizontalAlignment = Alignment.Start) {
+                Text(
+                    text,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
+                )
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+            }
+        } else {
+            Text(
+                text,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White
+            )
+        }
+    }
+}
+
+@Composable
+private fun IconBadge(icon: ImageVector, tint: Color, size: Dp = 64.dp) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(RoundedCornerShape(size / 3))
+            .background(Color(0x22FFFFFF)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(size * 0.45f))
     }
 }
 
@@ -257,7 +314,7 @@ private fun GoToGoalPanel(goalTitle: String, onStartSession: () -> Unit, onBack:
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("🚀", fontSize = 52.sp)
+        IconBadge(icon = FeatherIcons.TrendingUp, tint = FocusPurpleLight, size = 76.dp)
         Spacer(Modifier.height(24.dp))
         Text(
             "Let's make the next\n10 minutes count.",
@@ -286,20 +343,25 @@ private fun GoToGoalPanel(goalTitle: String, onStartSession: () -> Unit, onBack:
 
 @Composable
 private fun ChallengePanel(
-    question: LearningQuestion?,
-    selectedAnswer: Int,
-    answerRevealed: Boolean,
-    xpEarned: Int,
-    isLoading: Boolean,
-    activeTab: RecommendationTab,
-    videoRecs: List<RecommendationItem>,
-    articleRecs: List<RecommendationItem>,
-    eventRecs: List<RecommendationItem>,
+    state: InterventionUiState,
     onSelectTab: (RecommendationTab) -> Unit,
     onSelectAnswer: (Int) -> Unit,
+    onOpenVideo: (String) -> Unit,
+    onCloseVideo: () -> Unit,
+    onFlipFlashcard: () -> Unit,
+    onNextFlashcard: () -> Unit,
+    onReflectionAnswerChange: (String) -> Unit,
+    onSubmitReflection: () -> Unit,
     onDone: () -> Unit,
     onBack: () -> Unit
 ) {
+    val activeTab = state.recommendationTab
+
+    if (state.watchingUrl != null) {
+        InAppVideoPlayer(url = state.watchingUrl, onClose = onCloseVideo)
+        return
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -309,10 +371,10 @@ private fun ChallengePanel(
     ) {
         Spacer(Modifier.height(24.dp))
 
-        Text("🧠", fontSize = 42.sp)
+        IconBadge(icon = FeatherIcons.HelpCircle, tint = FocusTeal, size = 60.dp)
         Spacer(Modifier.height(12.dp))
         Text(
-            "TAKE A MICRO-BREAK",
+            "MICROLEARNING",
             style = MaterialTheme.typography.labelLarge,
             color = FocusTeal,
             letterSpacing = 2.sp
@@ -325,22 +387,45 @@ private fun ChallengePanel(
         Spacer(Modifier.height(28.dp))
 
         when (activeTab) {
-            RecommendationTab.WATCH -> RecommendationList(videoRecs, FeatherIcons.Youtube)
-            RecommendationTab.READ -> RecommendationList(articleRecs, FeatherIcons.BookOpen)
-            RecommendationTab.DISCOVER -> RecommendationList(eventRecs, FeatherIcons.MapPin)
+            RecommendationTab.WATCH -> RecommendationList(state.videoRecs, FeatherIcons.Youtube, onOpenVideo)
+            RecommendationTab.READ -> RecommendationList(state.articleRecs, FeatherIcons.BookOpen, onOpenVideo)
+            RecommendationTab.DISCOVER -> RecommendationList(state.eventRecs, FeatherIcons.MapPin, onOpenVideo)
             RecommendationTab.QUIZ -> QuizContent(
-                question = question,
-                selectedAnswer = selectedAnswer,
-                answerRevealed = answerRevealed,
-                xpEarned = xpEarned,
-                isLoading = isLoading,
+                question = state.question,
+                selectedAnswer = state.selectedAnswer,
+                answerRevealed = state.answerRevealed,
+                xpEarned = state.xpEarned,
+                isLoading = state.isLoadingQuestion,
                 onSelectAnswer = onSelectAnswer,
+                onDone = onDone
+            )
+            RecommendationTab.FLASHCARDS -> FlashcardsContent(
+                cards = state.flashcards,
+                index = state.flashcardIndex,
+                flipped = state.flashcardFlipped,
+                isLoading = state.flashcardsLoading,
+                isError = state.flashcardsError,
+                onFlip = onFlipFlashcard,
+                onNext = onNextFlashcard,
+                onDone = onDone
+            )
+            RecommendationTab.REFLECT -> ReflectContent(
+                reflection = state.reflection,
+                answer = state.reflectionAnswer,
+                submitted = state.reflectionSubmitted,
+                xpEarned = state.xpEarned,
+                isLoading = state.reflectionLoading,
+                isError = state.reflectionError,
+                onAnswerChange = onReflectionAnswerChange,
+                onSubmit = onSubmitReflection,
                 onDone = onDone
             )
         }
 
         Spacer(Modifier.height(16.dp))
-        if (!(activeTab == RecommendationTab.QUIZ && answerRevealed)) {
+        val hideBack = (activeTab == RecommendationTab.QUIZ && state.answerRevealed) ||
+            (activeTab == RecommendationTab.REFLECT && state.reflectionSubmitted)
+        if (!hideBack) {
             TextButton(onClick = onBack) {
                 Text("← Back", color = Color(0xFFB0AEC8))
             }
@@ -352,6 +437,8 @@ private fun ChallengePanel(
 private fun RecommendationTabRow(activeTab: RecommendationTab, onSelectTab: (RecommendationTab) -> Unit) {
     val tabs = listOf(
         Triple(RecommendationTab.QUIZ, "Quiz", FeatherIcons.HelpCircle),
+        Triple(RecommendationTab.FLASHCARDS, "Cards", FeatherIcons.Layers),
+        Triple(RecommendationTab.REFLECT, "Reflect", FeatherIcons.Feather),
         Triple(RecommendationTab.WATCH, "Watch", FeatherIcons.Youtube),
         Triple(RecommendationTab.READ, "Read", FeatherIcons.BookOpen),
         Triple(RecommendationTab.DISCOVER, "Discover", FeatherIcons.MapPin)
@@ -386,8 +473,7 @@ private fun RecommendationTabRow(activeTab: RecommendationTab, onSelectTab: (Rec
 }
 
 @Composable
-private fun RecommendationList(items: List<RecommendationItem>, typeIcon: ImageVector) {
-    val context = LocalContext.current
+private fun RecommendationList(items: List<RecommendationItem>, typeIcon: ImageVector, onOpen: (String) -> Unit) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -398,9 +484,7 @@ private fun RecommendationList(items: List<RecommendationItem>, typeIcon: ImageV
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
                     .background(Color(0x1AFFFFFF))
-                    .clickable {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.url)))
-                    }
+                    .clickable { onOpen(item.url) }
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -431,7 +515,7 @@ private fun RecommendationList(items: List<RecommendationItem>, typeIcon: ImageV
                 }
                 Spacer(Modifier.width(8.dp))
                 Icon(
-                    FeatherIcons.ExternalLink,
+                    FeatherIcons.PlayCircle,
                     contentDescription = null,
                     tint = Color(0xFF8B88A8),
                     modifier = Modifier.size(16.dp)
@@ -446,6 +530,189 @@ private fun RecommendationList(items: List<RecommendationItem>, typeIcon: ImageV
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun InAppVideoPlayer(url: String, onClose: () -> Unit) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onClose) {
+                Icon(FeatherIcons.X, contentDescription = "Close", tint = Color.White)
+            }
+            Text(
+                "Watching in FocusLoop",
+                style = MaterialTheme.typography.labelLarge,
+                color = Color(0xFFB0AEC8)
+            )
+        }
+        androidx.compose.ui.viewinterop.AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { context ->
+                android.webkit.WebView(context).apply {
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    settings.mediaPlaybackRequiresUserGesture = false
+                    webViewClient = android.webkit.WebViewClient()
+                    webChromeClient = android.webkit.WebChromeClient()
+                    loadUrl(url)
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun FlashcardsContent(
+    cards: List<Flashcard>,
+    index: Int,
+    flipped: Boolean,
+    isLoading: Boolean,
+    isError: Boolean,
+    onFlip: () -> Unit,
+    onNext: () -> Unit,
+    onDone: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        when {
+            isLoading -> {
+                CircularProgressIndicator(color = FocusTeal)
+                Spacer(Modifier.height(12.dp))
+                Text("Generating flashcards for you…", color = Color(0xFFB0AEC8))
+            }
+            isError || cards.isEmpty() -> {
+                Text("Couldn't load flashcards right now.", color = Color(0xFFB0AEC8), textAlign = TextAlign.Center)
+            }
+            index >= cards.size -> {
+                Icon(FeatherIcons.CheckCircle, contentDescription = null, tint = FocusGreen, modifier = Modifier.size(40.dp))
+                Spacer(Modifier.height(16.dp))
+                Text("You've been through all the cards.", color = Color.White, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(24.dp))
+                InterventionButton("Done", FocusPurple, onDone, icon = FeatherIcons.CheckCircle)
+            }
+            else -> {
+                val card = cards[index]
+                Text(
+                    "${index + 1} / ${cards.size}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color(0xFF8B88A8)
+                )
+                Spacer(Modifier.height(16.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 180.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Brush.linearGradient(listOf(FocusPurple, FocusTealDark)))
+                        .clickable(onClick = onFlip)
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        if (flipped) card.back else card.front,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        fontWeight = if (flipped) FontWeight.Normal else FontWeight.SemiBold,
+                        textAlign = TextAlign.Center
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    if (flipped) "Tap the card to flip back" else "Tap the card to reveal the answer",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color(0xFF8B88A8)
+                )
+                Spacer(Modifier.height(24.dp))
+                InterventionButton(
+                    if (index == cards.size - 1) "Finish" else "Next Card",
+                    FocusTealDark,
+                    onNext,
+                    icon = FeatherIcons.ArrowRight
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReflectContent(
+    reflection: ReflectionPrompt?,
+    answer: String,
+    submitted: Boolean,
+    xpEarned: Int,
+    isLoading: Boolean,
+    isError: Boolean,
+    onAnswerChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onDone: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        when {
+            isLoading -> {
+                CircularProgressIndicator(color = FocusTeal)
+                Spacer(Modifier.height(12.dp))
+                Text("Thinking of something worth sharing…", color = Color(0xFFB0AEC8))
+            }
+            isError || reflection == null -> {
+                Text("Couldn't load a reflection prompt right now.", color = Color(0xFFB0AEC8), textAlign = TextAlign.Center)
+            }
+            submitted -> {
+                Icon(FeatherIcons.CheckCircle, contentDescription = null, tint = FocusGreen, modifier = Modifier.size(40.dp))
+                Spacer(Modifier.height(16.dp))
+                Text("Nice reflection.", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(20.dp))
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0x33FFFFFF))
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(FeatherIcons.Zap, contentDescription = null, tint = FocusYellow, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("+$xpEarned Learning XP", color = FocusYellow, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.height(24.dp))
+                InterventionButton("Done", FocusPurple, onDone, icon = FeatherIcons.CheckCircle)
+            }
+            else -> {
+                Text(
+                    reflection.insight,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 24.sp
+                )
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    reflection.question,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = FocusTeal,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = answer,
+                    onValueChange = onAnswerChange,
+                    placeholder = { Text("Type a quick answer…", color = Color(0xFF6B6880)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    minLines = 2,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = FocusTeal,
+                        unfocusedBorderColor = Color(0xFF3A3860)
+                    )
+                )
+                Spacer(Modifier.height(20.dp))
+                InterventionButton("Submit", FocusTealDark, onSubmit, icon = FeatherIcons.CheckCircle)
+            }
         }
     }
 }
@@ -504,12 +771,21 @@ private fun QuizContent(
         } else {
             // Answer revealed
             val isCorrect = selectedAnswer == question.correctAnswer
-            Text(
-                if (isCorrect) "✓ Correct!" else "✗ Not quite...",
-                style = MaterialTheme.typography.headlineSmall,
-                color = if (isCorrect) FocusGreen else FocusRed,
-                fontWeight = FontWeight.Bold
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    if (isCorrect) FeatherIcons.CheckCircle else FeatherIcons.XCircle,
+                    contentDescription = null,
+                    tint = if (isCorrect) FocusGreen else FocusRed,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    if (isCorrect) "Correct!" else "Not quite...",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = if (isCorrect) FocusGreen else FocusRed,
+                    fontWeight = FontWeight.Bold
+                )
+            }
             Spacer(Modifier.height(16.dp))
             Text(
                 question.explanation,
@@ -526,12 +802,12 @@ private fun QuizContent(
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("⚡", fontSize = 22.sp)
+                Icon(FeatherIcons.Zap, contentDescription = null, tint = FocusYellow, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text("+$xpEarned Learning XP", color = FocusYellow, fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.height(32.dp))
-            InterventionButton("Nice. Let's go! 🚀", FocusPurple, onDone)
+            InterventionButton("Nice. Let's go!", FocusPurple, onDone, icon = FeatherIcons.TrendingUp)
         }
     }
 }
@@ -549,7 +825,7 @@ private fun QuickResetPanel(onDone: () -> Unit, onGoToGoal: () -> Unit, onBack: 
         verticalArrangement = Arrangement.Center
     ) {
         if (step == 0) {
-            Text("🌱", fontSize = 52.sp)
+            IconBadge(icon = FeatherIcons.Wind, tint = FocusGreen, size = 76.dp)
             Spacer(Modifier.height(24.dp))
             Text("QUICK RESET", style = MaterialTheme.typography.labelLarge, color = FocusGreen, letterSpacing = 2.sp)
             Spacer(Modifier.height(24.dp))
@@ -582,11 +858,11 @@ private fun QuickResetPanel(onDone: () -> Unit, onGoToGoal: () -> Unit, onBack: 
                 )
             )
             Spacer(Modifier.height(24.dp))
-            InterventionButton("Done ✓", FocusGreen, { if (reflection.isNotBlank()) step = 1 })
+            InterventionButton("Done", FocusGreen, { if (reflection.isNotBlank()) step = 1 }, icon = FeatherIcons.CheckCircle)
         } else {
             Text("Nice.\n\nNow let's make that happen.", style = MaterialTheme.typography.headlineMedium, color = Color.White, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(40.dp))
-            InterventionButton("🚀 Start Focus Session", FocusPurple, onGoToGoal)
+            InterventionButton("Start Focus Session", FocusPurple, onGoToGoal, icon = FeatherIcons.TrendingUp)
             Spacer(Modifier.height(12.dp))
             TextButton(onClick = onDone) { Text("Return to app", color = Color(0xFFB0AEC8)) }
         }
@@ -610,7 +886,7 @@ private fun SnoozePanel(secondsRemaining: Int, onDismiss: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("⏱", fontSize = 52.sp)
+        IconBadge(icon = FeatherIcons.Clock, tint = FocusPurpleLight, size = 76.dp)
         Spacer(Modifier.height(24.dp))
         Text("Okay.", style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(12.dp))
@@ -621,7 +897,7 @@ private fun SnoozePanel(secondsRemaining: Int, onDismiss: () -> Unit) {
         Text("remaining", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF6B6880))
         Spacer(Modifier.height(40.dp))
         if (secondsRemaining <= 0) {
-            Text("Time's up! 👋", style = MaterialTheme.typography.titleLarge, color = FocusYellow)
+            Text("Time's up!", style = MaterialTheme.typography.titleLarge, color = FocusYellow)
         }
         TextButton(onClick = onDismiss) {
             Text("Dismiss", color = Color(0xFF6B6880))
